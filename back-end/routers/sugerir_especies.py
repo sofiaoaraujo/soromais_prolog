@@ -8,7 +8,7 @@ from services.wikimedia import buscar_imagem_especie
 
 router = APIRouter(prefix="/sugerir-especies", tags=["sugestoes"])
 
-_GENEROS_VALIDOS = ["Bothrops", "Crotalus", "Lachesis", "Micrurus"]
+_GENEROS_VALIDOS = ["Bothrops", "Crotalus", "Lachesis", "Micrurus","Leptomicrurus"]
 
 _SCHEMA_EXEMPLO = [
     {

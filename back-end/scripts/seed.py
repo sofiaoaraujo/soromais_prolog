@@ -4,6 +4,7 @@
 #
 # Pré-requisito: rodar `python back-end/scripts/pipeline.py` antes, para gerar o
 # hospitais.json. Rodar seed.py sozinho sem isso feito antes falha com FileNotFoundError.
+
 import json
 import os
 from pathlib import Path

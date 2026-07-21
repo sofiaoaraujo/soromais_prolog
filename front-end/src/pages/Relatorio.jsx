@@ -85,12 +85,12 @@ export default function Relatorio() {
           lugar: ia.lugar,
           efeitos: ia.efeitos,
           tempo_de_acao: ia.tempo_de_acao,
-          gravidade: ia.gravidade,
           o_que_fazer: ia.o_que_fazer,
           foto_url: dados.foto_url,
         };
 
         setResultadoIa(novoResultado);
+        setSecoesAbertas(SECOES_PADRAO);
         sessionStorage.setItem('soromais_ia', JSON.stringify(novoResultado));
         sessionStorage.setItem('soromais_preview', urlImagem);
       }
@@ -169,10 +169,10 @@ export default function Relatorio() {
           lugar: ia.lugar,
           efeitos: ia.efeitos,
           tempo_de_acao: ia.tempo_de_acao,
-          gravidade: ia.gravidade,
           o_que_fazer: ia.o_que_fazer,
         }
         setResultadoIa(novoResultado)
+        setSecoesAbertas(SECOES_PADRAO)
         sessionStorage.setItem('soromais_ia', JSON.stringify(novoResultado))
       }
     } catch (erro) {
@@ -186,6 +186,10 @@ export default function Relatorio() {
     setForm({ ...form, [e.target.name]: e.target.value })
   }
 
+  const SECOES_PADRAO = { dados: false, efeitos: true, oQueFazer: true }
+  const [secoesAbertas, setSecoesAbertas] = useState(SECOES_PADRAO)
+  const toggleSecao = (chave) => setSecoesAbertas(prev => ({ ...prev, [chave]: !prev[chave] }))
+
   const animal = resultadoIa
 
   const dadosRelatorio = {
@@ -195,7 +199,6 @@ export default function Relatorio() {
     lugar: animal?.lugar || null,
     efeitos: animal?.efeitos || null,
     tempo_de_acao: animal?.tempo_de_acao || null,
-    gravidade: animal?.gravidade || null,
     foto_url: animal?.foto_url || null,
   }
 
@@ -343,63 +346,104 @@ export default function Relatorio() {
         )}
 
         {animal && (
-          <section className="bg-surface-container-low border border-outline-variant rounded-xl p-md shadow-sm">
-            <div className="flex items-center gap-xs mb-xs">
+          <section className="relative bg-surface-container-low border border-outline-variant rounded-xl p-md shadow-sm">
+            <button
+              type="button"
+              onClick={() => toggleSecao('dados')}
+              className="absolute top-2 right-2 w-8 h-8 flex items-center justify-center rounded-full text-on-surface-variant hover:bg-black/5 active:scale-95 transition-transform"
+              aria-label={secoesAbertas.dados ? 'Minimizar' : 'Expandir'}
+            >
+              <span className={`text-lg font-bold inline-block transition-transform duration-200 ${secoesAbertas.dados ? '' : 'rotate-180'}`}>
+                &lt;
+              </span>
+            </button>
+
+            <div className="flex items-center gap-xs mb-xs pr-8">
               <span className="material-symbols-outlined text-primary">psychology</span>
               <h3 className="font-headline-sm text-headline-sm text-primary">{animal.especie}</h3>
             </div>
 
-            <ul className="space-y-1 mt-xs">
-              {animal.lugar.split('.').filter(Boolean).map((item, i) => (
-                <li key={i} className="font-body-md text-on-surface flex gap-2">
-                  <span>•</span><span>{item.trim()}</span>
-                </li>
-              ))}
-            </ul>
+            {secoesAbertas.dados && (
+              <>
+                <ul className="space-y-1 mt-xs">
+                  {animal.lugar.split('.').filter(Boolean).map((item, i) => (
+                    <li key={i} className="font-body-md text-on-surface flex gap-2">
+                      <span>•</span><span>{item.trim()}</span>
+                    </li>
+                  ))}
+                </ul>
 
-            <ul className="space-y-1 mt-xs">
-              {animal.tempo_de_acao.split('.').filter(Boolean).map((item, i) => (
-                <li key={i} className="font-body-md text-on-surface flex gap-2">
-                  <span>•</span><span>{item.trim()}</span>
-                </li>
-              ))}
-            </ul>
+                <ul className="space-y-1 mt-xs">
+                  {animal.tempo_de_acao.split('.').filter(Boolean).map((item, i) => (
+                    <li key={i} className="font-body-md text-on-surface flex gap-2">
+                      <span>•</span><span>{item.trim()}</span>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
           </section>
         )}
 
         {animal?.efeitos && (
-          <section className="bg-error-container/40 border border-error/30 rounded-xl p-md">
-            <div className="flex items-center gap-xs mb-sm">
+          <section className="relative bg-error-container/40 border border-error/30 rounded-xl p-md">
+            <button
+              type="button"
+              onClick={() => toggleSecao('efeitos')}
+              className="absolute top-2 right-2 w-8 h-8 flex items-center justify-center rounded-full text-error hover:bg-black/5 active:scale-95 transition-transform"
+              aria-label={secoesAbertas.efeitos ? 'Minimizar' : 'Expandir'}
+            >
+              <span className={`text-lg font-bold inline-block transition-transform duration-200 ${secoesAbertas.efeitos ? '' : 'rotate-180'}`}>
+                &lt;
+              </span>
+            </button>
+
+            <div className="flex items-center gap-xs mb-sm pr-8">
               <span className="material-symbols-outlined text-error">cancel</span>
               <h3 className="font-headline-sm text-headline-sm text-error">
-                Efeitos do Veneno — Gravidade: {animal.gravidade}
+                Efeitos do Veneno
               </h3>
             </div>
-            <ul className="space-y-1">
-              {animal.efeitos.split('\n').filter(Boolean).map((e, i) => (
-                <li key={i} className="font-body-md text-on-error-container flex gap-2">
-                  <span>•</span><span>{e.replace(/^-\s*/, '')}</span>
-                </li>
-              ))}
-            </ul>
+            {secoesAbertas.efeitos && (
+              <ul className="space-y-1">
+                {animal.efeitos.split('\n').filter(Boolean).map((e, i) => (
+                  <li key={i} className="font-body-md text-on-error-container flex gap-2">
+                    <span>•</span><span>{e.replace(/^-\s*/, '')}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
           </section>
         )}
 
         {animal?.o_que_fazer && (
-          <section className="bg-secondary-container/40 border border-secondary/30 rounded-xl p-md">
-            <div className="flex items-center gap-xs mb-sm">
+          <section className="relative bg-secondary-container/40 border border-secondary/30 rounded-xl p-md">
+            <button
+              type="button"
+              onClick={() => toggleSecao('oQueFazer')}
+              className="absolute top-2 right-2 w-8 h-8 flex items-center justify-center rounded-full text-secondary hover:bg-black/5 active:scale-95 transition-transform"
+              aria-label={secoesAbertas.oQueFazer ? 'Minimizar' : 'Expandir'}
+            >
+              <span className={`text-lg font-bold inline-block transition-transform duration-200 ${secoesAbertas.oQueFazer ? '' : 'rotate-180'}`}>
+                &lt;
+              </span>
+            </button>
+
+            <div className="flex items-center gap-xs mb-sm pr-8">
               <span className="material-symbols-outlined text-secondary">medical_services</span>
               <h3 className="font-headline-sm text-headline-sm text-secondary">
                 O que fazer?
               </h3>
             </div>
-            <ul className="space-y-1">
-              {animal.o_que_fazer.split('\n').filter(Boolean).map((item, i) => (
-                <li key={i} className="font-body-md text-on-secondary-container flex gap-2">
-                  <span>•</span><span>{item.replace(/^-\s*/, '')}</span>
-                </li>
-              ))}
-            </ul>
+            {secoesAbertas.oQueFazer && (
+              <ul className="space-y-1">
+                {animal.o_que_fazer.split('\n').filter(Boolean).map((item, i) => (
+                  <li key={i} className="font-body-md text-on-secondary-container flex gap-2">
+                    <span>•</span><span>{item.replace(/^-\s*/, '')}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
           </section>
         )}
 

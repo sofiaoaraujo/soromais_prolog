@@ -8,30 +8,33 @@ import uuid
 
 router = APIRouter(prefix="/identificar-animal", tags=["identificacao"])
 
+_GENEROS_VALIDOS = ["Bothrops", "Crotalus", "Lachesis", "Micrurus","Leptomicrurus"]
+
 _ANIMAL_SCHEMA = {
-    "especie": "Nome popular (ex: Escorpião-amarelo)",
+    "especie": "Nome popular (ex: Jararaca)",
     "lugar": "Regiões do país e habitats comuns onde é encontrado",
     "efeitos": "Principais sintomas e efeitos do veneno no corpo humano",
     "tempo_de_acao": "Tempo estimado para agravamento ou risco de morte sem socorro",
-    "gravidade": "Nível de urgência: exatamente um de ['Baixa', 'Moderada', 'Alta', 'Extrema']",
     "o_que_fazer": "Primeiros socorros específicos para esse animal, do momento da picada/ataque até a chegada ao hospital",
+    "genero": "Um dos gêneros: Bothrops, Crotalus, Lachesis ou Micrurus",
 }
-
-_GRAVIDADES_VALIDAS = {"Baixa", "Moderada", "Alta", "Extrema"}
 
 
 def _build_prompt(localizacao: str) -> str:
     contexto_geo = f"\nLocalização do incidente: {localizacao}" if localizacao else ""
-    return f"""Você é um especialista em animais peçonhentos do Brasil.
+    generos = ", ".join(_GENEROS_VALIDOS)
+    return f"""Você é um especialista em serpentes peçonhentas do Brasil.
 Analise a imagem e retorne SOMENTE um objeto JSON válido, sem texto adicional, sem markdown, sem explicações.{contexto_geo}
 
 Regras para os valores:
+- Considere apenas serpentes peçonhentas nativas do Brasil pertencentes aos gêneros: {generos}
+- O campo "genero" deve ser exatamente um desses valores: {generos}
 - Sem emojis em nenhum campo
 - Textos curtos e diretos, máximo 2 linhas por campo
 - O campo "efeitos" deve ser uma lista de 3 a 4 tópicos separados por '\\n', cada um começando com '- '
 - O campo "lugar" deve citar apenas regiões/biomas, sem detalhes extensos
 - O campo "tempo_de_acao" deve ser uma frase curta (ex: "Sintomas em 30min, risco de morte em 6-24h sem tratamento")
-- O campo "o_que_fazer" deve ser uma lista de 4 a 5 tópicos separados por '\\n', cada um começando com '- ', com condutas de primeiros socorros ESPECÍFICAS para esse animal (ex: se for cobra peçonhenta, orientar a manter o membro imobilizado e abaixo do nível do coração; se for aranha ou escorpião, orientar compressa fria; NUNCA sugerir torniquete, sucção, cortes ou remédios caseiros). A foto do animal já foi enviada e a espécie já foi identificada — NUNCA inclua orientações como "tire uma foto do animal" ou "fotografe o animal para identificação"
+- O campo "o_que_fazer" deve ser uma lista de 4 a 5 tópicos separados por '\\n', cada um começando com '- ', com condutas de primeiros socorros ESPECÍFICAS para essa serpente (ex: manter o membro imobilizado e abaixo do nível do coração; NUNCA sugerir torniquete, sucção, cortes ou remédios caseiros). A foto do animal já foi enviada e a espécie já foi identificada — NUNCA inclua orientações como "tire uma foto do animal" ou "fotografe o animal para identificação"
 - Use a localização do incidente (se fornecida) para priorizar espécies nativas dessa região
 
 O JSON deve ter exatamente estas chaves:
@@ -78,9 +81,6 @@ async def identificar_animal(
 
         analise = json.loads(raw)
 
-        if analise.get("gravidade") not in _GRAVIDADES_VALIDAS:
-            analise["gravidade"] = "Moderada"
-
         return RespostaIdentificacao(
             status="sucesso",
             arquivo=file.filename,
@@ -96,16 +96,19 @@ async def identificar_animal(
 
 @router.post("/por-nome", response_model=RespostaIdentificacao)
 async def identificar_por_nome(nome_animal: str = Form(...)):
-    prompt = f"""Você é um especialista em animais peçonhentos do Brasil.
+    generos = ", ".join(_GENEROS_VALIDOS)
+    prompt = f"""Você é um especialista em serpentes peçonhentas do Brasil.
 A espécie é "{nome_animal}". Retorne SOMENTE um objeto JSON válido, sem texto adicional, sem markdown, sem explicações.
 
 Regras para os valores:
+- Considere apenas serpentes peçonhentas nativas do Brasil pertencentes aos gêneros: {generos}
+- O campo "genero" deve ser exatamente um desses valores: {generos}
 - Sem emojis em nenhum campo
 - Textos curtos e diretos, máximo 2 linhas por campo
 - O campo "efeitos" deve ser uma lista de 3 a 4 tópicos separados por '\\n', cada um começando com '- '
 - O campo "lugar" deve citar apenas regiões/biomas, sem detalhes extensos
 - O campo "tempo_de_acao" deve ser uma frase curta (ex: "Sintomas em 30min, risco de morte em 6-24h sem tratamento")
-- O campo "o_que_fazer" deve ser uma lista de 4 a 5 tópicos separados por '\\n', cada um começando com '- ', com condutas de primeiros socorros ESPECÍFICAS para esse animal (ex: se for cobra peçonhenta, orientar a manter o membro imobilizado e abaixo do nível do coração; se for aranha ou escorpião, orientar compressa fria; NUNCA sugerir torniquete, sucção, cortes ou remédios caseiros). A foto do animal já foi enviada e a espécie já foi identificada — NUNCA inclua orientações como "tire uma foto do animal" ou "fotografe o animal para identificação"
+- O campo "o_que_fazer" deve ser uma lista de 4 a 5 tópicos separados por '\\n', cada um começando com '- ', com condutas de primeiros socorros ESPECÍFICAS para essa serpente (ex: manter o membro imobilizado e abaixo do nível do coração; NUNCA sugerir torniquete, sucção, cortes ou remédios caseiros). A foto do animal já foi enviada e a espécie já foi identificada — NUNCA inclua orientações como "tire uma foto do animal" ou "fotografe o animal para identificação"
 
 O JSON deve ter exatamente estas chaves:
 {json.dumps(_ANIMAL_SCHEMA, ensure_ascii=False, indent=2)}
@@ -124,9 +127,6 @@ O JSON deve ter exatamente estas chaves:
             raw = raw.split("\n", 1)[-1].rsplit("```", 1)[0].strip()
 
         analise = json.loads(raw)
-
-        if analise.get("gravidade") not in _GRAVIDADES_VALIDAS:
-            analise["gravidade"] = "Moderada"
 
         return RespostaIdentificacao(
             status="sucesso",

@@ -35,7 +35,6 @@ async def enviar_whatsapp(dados: DadosWhatsApp):
     legenda = (
         f"*RELATÓRIO DE ACIDENTE - SOROMAIS*\n"
         f"Espécie: {dados.especie or 'Não identificado'}\n"
-        f"Gravidade: {dados.gravidade or 'Não informada'}\n"
         f"Paciente: {dados.nome or 'Não informado'}"
     )
 

@@ -1,13 +1,13 @@
 from pydantic import BaseModel
-from typing import Literal, Optional
+from typing import Optional
 
 class AnaliseAnimal(BaseModel):
     especie: str
     lugar: str
     efeitos: str
     tempo_de_acao: str
-    gravidade: Literal["Baixa", "Moderada", "Alta", "Extrema"]
     o_que_fazer: str
+    genero: str
 
 class RespostaIdentificacao(BaseModel):
     status: str

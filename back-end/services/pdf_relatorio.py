@@ -57,7 +57,7 @@ def gerar_pdf_relatorio(dados, hospital_nome: str) -> bytes:
             elementos.append(Paragraph(f"<b>Tempo de ação do veneno:</b> {dados.tempo_de_acao}", normal))
 
     if dados.efeitos:
-        elementos.append(Paragraph(f"Efeitos do Veneno — Gravidade: {dados.gravidade or 'Não informada'}", alerta_style))
+        elementos.append(Paragraph("Efeitos do Veneno", alerta_style))
         for linha in dados.efeitos.split('\n'):
             linha = linha.strip().lstrip('-').strip()
             if linha:

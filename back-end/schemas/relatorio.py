@@ -23,5 +23,4 @@ class DadosWhatsApp(BaseModel):
     lugar: Optional[str] = None
     efeitos: Optional[str] = None
     tempo_de_acao: Optional[str] = None
-    gravidade: Optional[str] = None
     foto_url: Optional[str] = None
