@@ -4,7 +4,7 @@ load_dotenv()
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from routers import hospitais, relatorio, whatsapp, identificacao, sugerir_especies
+from routers import hospitais, relatorio, whatsapp, identificacao, sugerir_especies, triagem
 
 app = FastAPI(title="SoroMais API")
 
@@ -20,6 +20,7 @@ app.include_router(relatorio.router)
 app.include_router(whatsapp.router)
 app.include_router(identificacao.router)
 app.include_router(sugerir_especies.router)
+app.include_router(triagem.router)
 
 
 @app.get("/")

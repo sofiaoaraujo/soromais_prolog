@@ -9,6 +9,8 @@ import uuid
 router = APIRouter(prefix="/identificar-animal", tags=["identificacao"])
 
 _GENEROS_VALIDOS = ["Bothrops", "Crotalus", "Lachesis", "Micrurus","Leptomicrurus"]
+_GENERO_NAO_PECONHENTA = "nao_peconhenta"
+_VALORES_GENERO_VALIDOS = set(_GENEROS_VALIDOS) | {_GENERO_NAO_PECONHENTA}
 
 _ANIMAL_SCHEMA = {
     "especie": "Nome popular (ex: Jararaca)",
@@ -16,7 +18,7 @@ _ANIMAL_SCHEMA = {
     "efeitos": "Principais sintomas e efeitos do veneno no corpo humano",
     "tempo_de_acao": "Tempo estimado para agravamento ou risco de morte sem socorro",
     "o_que_fazer": "Primeiros socorros específicos para esse animal, do momento da picada/ataque até a chegada ao hospital",
-    "genero": "Um dos gêneros: Bothrops, Crotalus, Lachesis ou Micrurus",
+    "genero": f"Um dos gêneros peçonhentos: Bothrops, Crotalus, Lachesis, Micrurus ou Leptomicrurus — ou '{_GENERO_NAO_PECONHENTA}' se a espécie identificada não for peçonhenta",
 }
 
 
@@ -27,8 +29,9 @@ def _build_prompt(localizacao: str) -> str:
 Analise a imagem e retorne SOMENTE um objeto JSON válido, sem texto adicional, sem markdown, sem explicações.{contexto_geo}
 
 Regras para os valores:
-- Considere apenas serpentes peçonhentas nativas do Brasil pertencentes aos gêneros: {generos}
-- O campo "genero" deve ser exatamente um desses valores: {generos}
+- Identifique a espécie real da serpente, mesmo que não seja peçonhenta ou não pertença a nenhum dos gêneros abaixo
+- O campo "genero" deve ser exatamente um destes valores: {generos}, {_GENERO_NAO_PECONHENTA}
+- Se a espécie não for peçonhenta ou não pertencer a nenhum desses gêneros, use genero: "{_GENERO_NAO_PECONHENTA}" (preencha os demais campos normalmente com informações reais sobre essa espécie, como ausência de veneno e cuidados com a mordida)
 - Sem emojis em nenhum campo
 - Textos curtos e diretos, máximo 2 linhas por campo
 - O campo "efeitos" deve ser uma lista de 3 a 4 tópicos separados por '\\n', cada um começando com '- '
@@ -81,6 +84,9 @@ async def identificar_animal(
 
         analise = json.loads(raw)
 
+        if analise.get("genero") not in _VALORES_GENERO_VALIDOS:
+            analise["genero"] = _GENERO_NAO_PECONHENTA
+
         return RespostaIdentificacao(
             status="sucesso",
             arquivo=file.filename,
@@ -101,8 +107,9 @@ async def identificar_por_nome(nome_animal: str = Form(...)):
 A espécie é "{nome_animal}". Retorne SOMENTE um objeto JSON válido, sem texto adicional, sem markdown, sem explicações.
 
 Regras para os valores:
-- Considere apenas serpentes peçonhentas nativas do Brasil pertencentes aos gêneros: {generos}
-- O campo "genero" deve ser exatamente um desses valores: {generos}
+- Identifique a espécie real da serpente, mesmo que não seja peçonhenta ou não pertença a nenhum dos gêneros abaixo
+- O campo "genero" deve ser exatamente um destes valores: {generos}, {_GENERO_NAO_PECONHENTA}
+- Se a espécie não for peçonhenta ou não pertencer a nenhum desses gêneros, use genero: "{_GENERO_NAO_PECONHENTA}" (preencha os demais campos normalmente com informações reais sobre essa espécie, como ausência de veneno e cuidados com a mordida)
 - Sem emojis em nenhum campo
 - Textos curtos e diretos, máximo 2 linhas por campo
 - O campo "efeitos" deve ser uma lista de 3 a 4 tópicos separados por '\\n', cada um começando com '- '
@@ -127,6 +134,9 @@ O JSON deve ter exatamente estas chaves:
             raw = raw.split("\n", 1)[-1].rsplit("```", 1)[0].strip()
 
         analise = json.loads(raw)
+
+        if analise.get("genero") not in _VALORES_GENERO_VALIDOS:
+            analise["genero"] = _GENERO_NAO_PECONHENTA
 
         return RespostaIdentificacao(
             status="sucesso",
