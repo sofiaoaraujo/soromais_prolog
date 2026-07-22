@@ -198,12 +198,14 @@ export default function Relatorio() {
   const [resultadoTriagem, setResultadoTriagem] = useState(null)
   const [carregandoTriagem, setCarregandoTriagem] = useState(false)
   const [erroTriagem, setErroTriagem] = useState(null)
+  const [relatorioTriagem, setRelatorioTriagem] = useState(null)
 
   const handleConcluirTriagem = async (payload) => {
     setTriagemGravidade(payload)
     setResultadoTriagem(null)
     setErroTriagem(null)
     setCarregandoTriagem(true)
+    setRelatorioTriagem(null)
 
     try {
       const resposta = await fetch(`${API_URL}/triagem`, {
@@ -223,6 +225,24 @@ export default function Relatorio() {
     } finally {
       setCarregandoTriagem(false)
     }
+
+    // Busca o relatório de triagem (Módulo 2) já aqui, assim que o
+    // questionário termina, pra não atrasar o momento do "Compartilhar"
+    // com o hospital. Independente do resultado do /triagem acima: se
+    // falhar, o envio ao hospital segue sem grau_triagem/conduta_triagem/
+    // relatorio_triagem — o back-end já trata esses campos como opcionais.
+    try {
+      const respostaRelatorio = await fetch(`${API_URL}/triagem/relatorio`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+      if (respostaRelatorio.ok) {
+        setRelatorioTriagem(await respostaRelatorio.json())
+      }
+    } catch (erro) {
+      console.error('Erro ao gerar relatório de triagem para o hospital:', erro)
+    }
   }
 
   const animal = resultadoIa
@@ -235,6 +255,9 @@ export default function Relatorio() {
     efeitos: animal?.efeitos || null,
     tempo_de_acao: animal?.tempo_de_acao || null,
     foto_url: animal?.foto_url || null,
+    grau_triagem: relatorioTriagem?.resultado?.grau || null,
+    conduta_triagem: relatorioTriagem?.resultado?.conduta || null,
+    relatorio_triagem: relatorioTriagem?.relatorio_texto || null,
   }
 
   return (
