@@ -79,7 +79,7 @@ explicar_grau_final(Tipo, Sintomas, Grau, Linha) :-
     Pares \= [],
     pior_par_lista(Pares, SintomaResponsavel-Grau),
     format(string(Linha),
-           "Grau final (motor categórico): ~w — resultado do pior grau entre os sintomas marcados; o sintoma decisivo foi ~w.",
+           "Grau final: ~w — resultado do pior grau entre os sintomas marcados; o sintoma decisivo foi ~w.",
            [Grau, SintomaResponsavel]).
 
 % ----------------------------------------------------------
@@ -96,7 +96,7 @@ explicar_score(Tipo, Sintomas, Score, Faixa, Linha) :-
     score_maximo(Tipo, Max),
     Percentual is (Score * 100) / Max,
     format(string(Linha),
-           "Score (motor de pontuação): ~w de ~w pontos possíveis (~1f%), classificado na faixa '~w' (faixa_score/2).",
+           "Score: ~w de ~w pontos possíveis (~1f%), classificado na faixa '~w'.",
            [Score, Max, Percentual, Faixa]).
 
 % ----------------------------------------------------------
@@ -111,7 +111,7 @@ explicar_conduta(Grau, Faixa, Flags, Linhas) :-
     ( (Grau == picada_seca ; Grau == observar) ->
         recomendacao(Grau, Faixa, Flags, Conduta),
         format(string(L),
-               "Conduta: ~w — caso sem envenenamento confirmado pela pré-triagem universal, os motores de gravidade (grau/score) não chegam a ser acionados.",
+               "Conduta: ~w — caso sem envenenamento confirmado pela pré-triagem universal, os motores de gravidade não chegam a ser acionados.",
                [Conduta]),
         Linhas = [L]
     ;
@@ -120,11 +120,11 @@ explicar_conduta(Grau, Faixa, Flags, Linhas) :-
             aperta(CondutaBase, CondutaFinal),
             ( CondutaBase == CondutaFinal ->
                 format(string(L),
-                       "Conduta base para grau ~w + faixa ~w já é '~w'. Há flag(s) contextual(is) ativa(s), mas o aperta/2 não precisa elevar mais nada — conduta mantida.",
+                       "Conduta base para grau ~w + faixa ~w já é '~w'. Há flag(s) contextual(is) ativa(s), mas não é preciso elevar mais nada — conduta mantida.",
                        [Grau, Faixa, CondutaBase])
             ;
                 format(string(L),
-                       "Conduta base para grau ~w + faixa ~w seria '~w'. Como há flag(s) contextual(is) ativa(s) (tem_flag_ativa/1), o aperta/2 elevou a conduta final para '~w'.",
+                       "Conduta base para grau ~w + faixa ~w seria '~w'. Como há flag(s) contextual(is) ativa(s), a conduta final foi elevada para '~w'.",
                        [Grau, Faixa, CondutaBase, CondutaFinal])
             ),
             Linhas = [L]
@@ -181,7 +181,7 @@ explicar(_Tipo, _Sintomas, Flags, Universal, Explicacao) :-
     avaliar_universal(Universal, Estado),
     Estado \== envenenamento,
     format(string(LinhaEstado),
-           "Pré-triagem universal (avaliar_universal/2): ~w — sem sintoma relatado no bloco universal (ou tempo insuficiente/excedido conforme a regra das 6h), então os motores de grau e score sequer são chamados.",
+           "Pré-triagem universal: ~w — sem sintoma relatado no bloco universal (ou tempo insuficiente/excedido conforme a regra das 6h), então os motores de grau e score sequer são chamados.",
            [Estado]),
     explicar_conduta(Estado, baixa, Flags, LinhasConduta),
     explicar_alertas(Flags, LinhasAlertas),

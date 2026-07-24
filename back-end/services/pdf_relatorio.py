@@ -53,6 +53,75 @@ _CONDUTA_LEGIVEL = {
 _VERDE_ESCURO = colors.HexColor('#0B6E4F')
 _CINZA_LINHA = colors.HexColor('#DDDDDD')
 
+# ==========================================================
+# Tradução dos nomes técnicos (átomos Prolog) pra rótulos em
+# português, sem underline, pro médico ler direto — só troca a
+# palavra que aparece na tela, não muda nenhum dado nem lógica.
+# ==========================================================
+
+_ROTULOS_TERMO = {
+    "local": "Sinal local (dor/edema)",
+    "sangramento": "Sangramento",
+    "choque": "Choque",
+    "diurese": "Diurese",
+    "coagulacao_proxy": "Coagulação",
+    "local_complicacao": "Complicação local",
+    "vagais": "Sinais vagais",
+    "neuro": "Sinal neurológico",
+    "mialgia": "Mialgia",
+    "urina_escura": "Urina escura",
+    "progressao_craniocaudal": "Progressão craniocaudal",
+    "respiratorio": "Insuficiência respiratória",
+    "tipo": "Tipo de acidente",
+    "contexto_risco": "Fator de risco",
+    "interferencia": "Interferência no atendimento",
+    "local_picada": "Local da picada",
+}
+
+
+def _rotulo_termo(nome: str) -> str:
+    """Nome técnico -> rótulo legível. Cai num fallback genérico
+    (troca '_' por espaço e capitaliza) se o termo não estiver
+    mapeado, pra nunca vazar um nome cru na tela."""
+    if nome in _ROTULOS_TERMO:
+        return _ROTULOS_TERMO[nome]
+    return nome.replace("_", " ").capitalize()
+
+
+def _dividir_termo(termo: str):
+    """'urina_escura(discreta)' -> ('urina_escura', 'discreta')."""
+    m = re.match(r"^([a-zA-Z_]+)\((.+)\)$", termo)
+    if m:
+        return m.group(1), m.group(2)
+    return termo, None
+
+
+def _termo_legivel(termo: str) -> str:
+    """'urina_escura(discreta)' -> 'Urina escura (discreta)'."""
+    nome, valor = _dividir_termo(termo)
+    rotulo = _rotulo_termo(nome)
+    return f"{rotulo} ({valor})" if valor else rotulo
+
+
+def _humanizar_condutas(texto: str) -> str:
+    """Troca átomos de conduta entre aspas simples (ex: 'transporte_
+    prioridade_maxima') pelo rótulo legível já usado no resto do
+    relatório, só na apresentação — o texto/raciocínio em si não muda."""
+    def substituir(m):
+        atomo = m.group(1)
+        legivel = _CONDUTA_LEGIVEL.get(atomo, atomo.replace("_", " "))
+        return f"'{legivel}'"
+    return re.sub(r"'([a-z0-9_]+)'", substituir, texto)
+
+
+def _humanizar_termos_em_frase(texto: str) -> str:
+    """Troca qualquer 'nome(valor)' embutido numa frase livre (ex: 'o
+    sintoma decisivo foi urina_escura(discreta)') pelo rótulo legível,
+    sem tocar no resto da frase."""
+    def substituir(m):
+        return _termo_legivel(m.group(0))
+    return re.sub(r"\b[a-zA-Z_]+\([a-zà-ú]+\)", substituir, texto)
+
 
 def _baixar_imagem(url: str, largura_max=8 * cm):
     try:
@@ -284,10 +353,11 @@ def gerar_pdf_relatorio(dados, hospital_nome: str) -> bytes:
                 for nome, valor in termos_sintomas:
                     termo = f"{nome}({valor})"
                     grave = grau_por_termo.get(termo) == "grave"
+                    rotulo_nome = _rotulo_termo(nome)
                     if grave:
-                        linhas_sint.append([cel_critica(nome), cel_critica(valor)])
+                        linhas_sint.append([cel_critica(rotulo_nome), cel_critica(valor)])
                     else:
-                        linhas_sint.append([Paragraph(nome, cel_bold), Paragraph(valor, cel)])
+                        linhas_sint.append([Paragraph(rotulo_nome, cel_bold), Paragraph(valor, cel)])
                 elementos.append(_tabela(linhas_sint, [7 * cm, 8.5 * cm]))
 
             # Flags/fatores de contexto — sempre em destaque: por
@@ -298,13 +368,13 @@ def gerar_pdf_relatorio(dados, hospital_nome: str) -> bytes:
                 elementos.append(Paragraph("Fatores de contexto/flags:", subsub_style))
                 linhas_flags = [[Paragraph("Fator", cel_header), Paragraph("Detalhe", cel_header)]]
                 for nome, valor in termos_flags:
-                    linhas_flags.append([cel_critica(nome), cel_critica(valor)])
+                    linhas_flags.append([cel_critica(_rotulo_termo(nome)), cel_critica(valor)])
                 elementos.append(_tabela(linhas_flags, [7 * cm, 8.5 * cm]))
 
             if d["alertas"]:
                 elementos.append(Paragraph("ALERTA", secao_style))
                 for flag_termo, texto_alerta in d["alertas"]:
-                    elementos.append(Paragraph(f"• <b>Flag {flag_termo}:</b> {texto_alerta}", bullet_style))
+                    elementos.append(Paragraph(f"• <b>{_termo_legivel(flag_termo)}:</b> {texto_alerta}", bullet_style))
 
             elementos.append(Paragraph("Resultado da Triagem (motor de inferência)", secao_style))
             linhas_resultado = [[Paragraph("Indicador", cel_header), Paragraph("Resultado", cel_header)]]
@@ -338,7 +408,7 @@ def gerar_pdf_relatorio(dados, hospital_nome: str) -> bytes:
                 ]]
                 for termo, grau, pontos in d["por_sintoma"]:
                     linhas_raciocinio.append([
-                        Paragraph(termo, cel_bold),
+                        Paragraph(_termo_legivel(termo), cel_bold),
                         Paragraph(grau, cel),
                         Paragraph(f"+{pontos} ponto(s)", cel),
                     ])
@@ -346,13 +416,13 @@ def gerar_pdf_relatorio(dados, hospital_nome: str) -> bytes:
 
             if d["grau_final_texto"]:
                 elementos.append(Paragraph("Grau final", subsub_style))
-                elementos.append(Paragraph(d["grau_final_texto"], normal))
+                elementos.append(Paragraph(_humanizar_termos_em_frase(d["grau_final_texto"]), normal))
             if d["score_motor_texto"]:
                 elementos.append(Paragraph("Score", subsub_style))
                 elementos.append(Paragraph(d["score_motor_texto"], normal))
             if d["conduta_agrav_texto"]:
                 elementos.append(Paragraph("Conduta e agravamentos", subsub_style))
-                elementos.append(Paragraph(d["conduta_agrav_texto"], normal))
+                elementos.append(Paragraph(_humanizar_condutas(d["conduta_agrav_texto"]), normal))
 
     # --- Rodapé / aviso ---
     elementos.append(Spacer(1, 0.6 * cm))
