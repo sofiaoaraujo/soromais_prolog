@@ -189,6 +189,6 @@ Este projeto ainda não possui uma licença definida. Até lá, todos os direito
 
 ## Contato / autores
 
-Desenvolvido por [Pierre](https://github.com/pierrequeiroz2006), [Sofia Araújo](https://github.com/sofiaoaraujo) e [Luciana]
+Desenvolvido por [Pierre Queiroz](https://github.com/pierrequeiroz2006), [Sofia Araújo](https://github.com/sofiaoaraujo) e [Luciana Nascimento](https://github.com/lucianahonorio).
 
 Repositório: [github.com/sofiaoaraujo/soromais_prolog](https://github.com/sofiaoaraujo/soromais_prolog)
