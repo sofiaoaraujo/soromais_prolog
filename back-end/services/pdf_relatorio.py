@@ -7,7 +7,7 @@ from reportlab.lib.pagesizes import A4
 from reportlab.lib.units import cm
 from reportlab.lib import colors
 from reportlab.platypus import (
-    SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image, PageBreak,
+    SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image,
 )
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.graphics.shapes import Drawing, Rect
@@ -88,6 +88,39 @@ def _rotulo_termo(nome: str) -> str:
     return nome.replace("_", " ").capitalize()
 
 
+# Valores (o "Y" dentro de "sintoma(Y)") tal como o questionário grava
+# no Prolog: minúsculo e sem acento. Aqui só corrige a grafia pra
+# português correto — não muda o dado, só a exibição.
+_ROTULOS_VALOR = {
+    "discreto": "Discreto", "discreta": "Discreta",
+    "evidente": "Evidente",
+    "intenso": "Intenso", "intensa": "Intensa",
+    "leve": "Leve", "moderado": "Moderado", "moderada": "Moderada", "grave": "Grave",
+    "sim": "Sim", "nao": "Não",
+    "oliguria": "Oligúria", "anuria": "Anúria",
+    "alterada": "Alterada",
+    "bolhas": "Bolhas", "necrose": "Necrose", "ambos": "Ambos", "ambas": "Ambas",
+    "mao": "Mão", "pe": "Pé", "dedo": "Dedo", "perna": "Perna",
+    "braco": "Braço", "tronco": "Tronco", "cabeca_pescoco": "Cabeça e pescoço",
+    "garrote": "Garrote", "corte": "Corte", "sucao": "Sucção", "substancia": "Substância",
+    "gestacao": "Gestação", "crianca": "Criança", "idoso": "Idoso",
+    "anticoagulante": "Anticoagulante",
+    "elapidico": "Elapídico",
+}
+
+
+def _rotulo_valor(valor: str) -> str:
+    """Valor técnico -> grafia correta em português. Fallback genérico
+    (troca '_' por espaço, maiúscula na primeira letra) se não mapeado."""
+    if valor is None:
+        return ""
+    chave = valor.strip().lower()
+    if chave in _ROTULOS_VALOR:
+        return _ROTULOS_VALOR[chave]
+    texto = valor.replace("_", " ")
+    return texto[:1].upper() + texto[1:] if texto else texto
+
+
 def _dividir_termo(termo: str):
     """'urina_escura(discreta)' -> ('urina_escura', 'discreta')."""
     m = re.match(r"^([a-zA-Z_]+)\((.+)\)$", termo)
@@ -97,21 +130,20 @@ def _dividir_termo(termo: str):
 
 
 def _termo_legivel(termo: str) -> str:
-    """'urina_escura(discreta)' -> 'Urina escura (discreta)'."""
+    """'urina_escura(discreta)' -> 'Urina escura (Discreta)'."""
     nome, valor = _dividir_termo(termo)
     rotulo = _rotulo_termo(nome)
-    return f"{rotulo} ({valor})" if valor else rotulo
+    return f"{rotulo} ({_rotulo_valor(valor)})" if valor else rotulo
 
 
 def _humanizar_condutas(texto: str) -> str:
-    """Troca átomos de conduta entre aspas simples (ex: 'transporte_
-    prioridade_maxima') pelo rótulo legível já usado no resto do
-    relatório, só na apresentação — o texto/raciocínio em si não muda."""
-    def substituir(m):
-        atomo = m.group(1)
-        legivel = _CONDUTA_LEGIVEL.get(atomo, atomo.replace("_", " "))
-        return f"'{legivel}'"
-    return re.sub(r"'([a-z0-9_]+)'", substituir, texto)
+    """Troca qualquer ocorrência de um átomo de conduta conhecido (com ou
+    sem aspas simples ao redor — os três formatos que explicacao.pl pode
+    gerar) pelo rótulo legível já usado no resto do relatório. Só troca
+    a apresentação; o texto/raciocínio em si não muda."""
+    for atomo, legivel in _CONDUTA_LEGIVEL.items():
+        texto = re.sub(rf"'?{atomo}'?", legivel, texto)
+    return texto
 
 
 def _humanizar_termos_em_frase(texto: str) -> str:
@@ -168,13 +200,6 @@ def _logo_app(lado=1.5 * cm):
     return _logo_cruz(lado)
 
 
-# ----------------------------------------------------------
-# Extração dos campos do texto único gerado por relatorio.pl
-# (relatorio_json/5). Os padrões abaixo casam exatamente com o
-# formato fixo que o próprio relatorio.pl/explicacao.pl emite —
-# nenhuma regra clínica é recalculada aqui, só lida de volta.
-# ----------------------------------------------------------
-
 def _extrair(padrao, texto, grupo=1):
     m = re.search(padrao, texto, re.MULTILINE)
     return m.group(grupo).strip() if m else None
@@ -209,15 +234,15 @@ def _extrair_dados_triagem(texto: str) -> dict:
         "score_linha": _extrair(r"^(Score de gravidade.+)$", texto),
         "conduta_recomendada": _extrair(r"^Conduta recomendada:\s*(.+)$", texto),
         "por_sintoma": por_sintoma,
-        "grau_final_texto": _extrair(r"^(Grau final \(motor categórico\):.+)$", texto),
-        "score_motor_texto": _extrair(r"^(Score \(motor de pontuação\):.+)$", texto),
+        "grau_final_texto": _extrair(r"^(Grau final:.+)$", texto),
+        "score_motor_texto": _extrair(r"^(Score:.+)$", texto),
         "conduta_agrav_texto": _extrair(r"^(Conduta (?:final|base para).+)$", texto),
         "alertas": alertas,
     }
 
 
 def _tabela(linhas_paragrafos, larguras):
-    t = Table(linhas_paragrafos, colWidths=larguras)
+    t = Table(linhas_paragrafos, colWidths=larguras, repeatRows=1)
     t.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), _VERDE_ESCURO),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
@@ -333,7 +358,7 @@ def gerar_pdf_relatorio(dados, hospital_nome: str) -> bytes:
         d = _extrair_dados_triagem(relatorio_triagem)
 
         if d["por_sintoma"] or d["tipo_serpente"]:
-            elementos.append(PageBreak())
+            elementos.append(Spacer(1, 0.4 * cm))
 
             elementos.append(Paragraph("Dados do Acidente (informados pelo paciente/socorrista)", secao_style))
             linhas_dados = [[Paragraph("Campo", cel_header), Paragraph("Informação", cel_header)]]
@@ -354,10 +379,11 @@ def gerar_pdf_relatorio(dados, hospital_nome: str) -> bytes:
                     termo = f"{nome}({valor})"
                     grave = grau_por_termo.get(termo) == "grave"
                     rotulo_nome = _rotulo_termo(nome)
+                    rotulo_valor = _rotulo_valor(valor)
                     if grave:
-                        linhas_sint.append([cel_critica(rotulo_nome), cel_critica(valor)])
+                        linhas_sint.append([cel_critica(rotulo_nome), cel_critica(rotulo_valor)])
                     else:
-                        linhas_sint.append([Paragraph(rotulo_nome, cel_bold), Paragraph(valor, cel)])
+                        linhas_sint.append([Paragraph(rotulo_nome, cel_bold), Paragraph(rotulo_valor, cel)])
                 elementos.append(_tabela(linhas_sint, [7 * cm, 8.5 * cm]))
 
             # Flags/fatores de contexto — sempre em destaque: por
@@ -368,7 +394,7 @@ def gerar_pdf_relatorio(dados, hospital_nome: str) -> bytes:
                 elementos.append(Paragraph("Fatores de contexto/flags:", subsub_style))
                 linhas_flags = [[Paragraph("Fator", cel_header), Paragraph("Detalhe", cel_header)]]
                 for nome, valor in termos_flags:
-                    linhas_flags.append([cel_critica(_rotulo_termo(nome)), cel_critica(valor)])
+                    linhas_flags.append([cel_critica(_rotulo_termo(nome)), cel_critica(_rotulo_valor(valor))])
                 elementos.append(_tabela(linhas_flags, [7 * cm, 8.5 * cm]))
 
             if d["alertas"]:
@@ -396,7 +422,7 @@ def gerar_pdf_relatorio(dados, hospital_nome: str) -> bytes:
             elementos.append(_tabela(linhas_resultado, [7 * cm, 8.5 * cm]))
 
             # --- Raciocínio do motor (Módulo 2) ---
-            elementos.append(PageBreak())
+            elementos.append(Spacer(1, 0.4 * cm))
             elementos.append(Paragraph("Raciocínio do Motor (auditável, gerado automaticamente)", secao_style))
 
             if d["por_sintoma"]:
@@ -409,7 +435,7 @@ def gerar_pdf_relatorio(dados, hospital_nome: str) -> bytes:
                 for termo, grau, pontos in d["por_sintoma"]:
                     linhas_raciocinio.append([
                         Paragraph(_termo_legivel(termo), cel_bold),
-                        Paragraph(grau, cel),
+                        Paragraph(_rotulo_valor(grau), cel),
                         Paragraph(f"+{pontos} ponto(s)", cel),
                     ])
                 elementos.append(_tabela(linhas_raciocinio, [7 * cm, 4 * cm, 4.5 * cm]))
