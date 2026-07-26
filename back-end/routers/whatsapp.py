@@ -1,4 +1,5 @@
 import os
+import re
 import uuid
 from fastapi import APIRouter
 from twilio.rest import Client
@@ -9,6 +10,23 @@ from services.pdf_relatorio import gerar_pdf_relatorio
 router = APIRouter(prefix="/enviar-whatsapp", tags=["notificacao"])
 
 BUCKET = "relatorios"
+
+
+def _formatar_e164(telefone: str) -> str:
+    """
+    Normaliza um telefone pro formato E.164 exigido pelo Twilio:
+    só dígitos, com código do país na frente, prefixado por '+'.
+    Ex: "83 3281-2640" -> "+558332812640"
+        "+55 83 99999-0000" -> "+5583999990000"
+    Assume Brasil (55) quando o número não vem com código de país.
+    """
+    digitos = re.sub(r"\D", "", telefone or "")
+    if not digitos:
+        return telefone
+    if not digitos.startswith("55"):
+        digitos = "55" + digitos
+    return f"+{digitos}"
+
 
 @router.post("")
 async def enviar_whatsapp(dados: DadosWhatsApp):
@@ -42,6 +60,6 @@ async def enviar_whatsapp(dados: DadosWhatsApp):
         from_=f"whatsapp:{os.getenv('TWILIO_WHATSAPP_NUMBER')}",
         body=legenda,
         media_url=[url_publica],
-        to=f"whatsapp:{telefone}",
+        to=f"whatsapp:{_formatar_e164(telefone)}",
     )
     return {"sucesso": True, "sid": message.sid, "pdf_url": url_publica}

@@ -1,3 +1,7 @@
+# Python virtual environment
+.venv/
+venv/
+back-end/.venv/
 # Dependências do Node
 node_modules/
 npm-debug.log

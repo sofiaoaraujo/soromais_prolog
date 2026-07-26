@@ -24,3 +24,9 @@ class DadosWhatsApp(BaseModel):
     efeitos: Optional[str] = None
     tempo_de_acao: Optional[str] = None
     foto_url: Optional[str] = None
+
+    # --- Módulo 2 (triagem) — opcionais: o front só manda se o
+    # fluxo de triagem foi rodado pra esse caso (POST /triagem/relatorio).
+    grau_triagem: Optional[str] = None
+    conduta_triagem: Optional[str] = None
+    relatorio_triagem: Optional[str] = None

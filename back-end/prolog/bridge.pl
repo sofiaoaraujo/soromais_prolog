@@ -1,6 +1,6 @@
 :- encoding(utf8).
 :- consult('main.pl').
-:- use_module(library(json)).
+:- use_module(library(http/json)).
 
 % ==========================================================
 % bridge.pl
