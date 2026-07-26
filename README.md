@@ -19,6 +19,8 @@ O usuário tira uma foto do animal, a IA identifica a espécie e o gênero, um q
 
 **Status**: em desenvolvimento (MVP funcional, com fluxo completo de identificação → triagem de gravidade → hospital → envio de relatório).
 
+> ⚠️ **Nota**: por se tratar de um site de teste, o relatório **não é enviado para nenhum hospital real**. Ao popular a tabela `hospital` no Supabase, substitua o número de telefone do hospital mais próximo pelo seu próprio número (ver seção [Back-end](#3-back-end)), para que o envio via WhatsApp chegue até você durante os testes.
+
 ## Funcionalidades principais
 
 - 📷 **Identificação por foto** — envia uma imagem da serpente e recebe espécie, gênero (Bothrops, Crotalus, Lachesis, Micrurus ou Leptomicrurus), habitat, efeitos do veneno, tempo de ação e primeiros socorros, via Gemini.
@@ -251,6 +253,8 @@ Para popular a tabela de hospitais com dados reais (CNES + PDF de hospitais de r
 python scripts/pipeline.py   # baixa/organiza os dados
 python scripts/seed.py       # popula o Supabase
 ```
+
+> ⚠️ Como este é um site de teste, o relatório não é de fato enviado para nenhum hospital. Após popular a tabela `hospital`, substitua na coluna `telefone` o número do hospital mais próximo (o que aparecerá para o seu teste) pelo seu próprio número, para receber o relatório via WhatsApp em vez do hospital real.
 
 Suba a API:
 
